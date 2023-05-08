@@ -3243,3 +3243,59 @@ This is decent performance. But note the caveat that when there was a correct no
       - If there are repeated responses, choose the most common response that is not N/A.
       - If there are no repeated non-N/A responses, then choose the first non-N/A response.
   - Repeatedly prompt GPT-3.5 with the paper text, piecemeal, to classify which excerpt(s) of the paper are relevant. Then feed the identified excerpt(s) to GPT-3.5 or GPT-4.
+
+## Testing chat mode in the notebook
+
+- I'm testing chat mode, same opener in the prompt. But breaking up into multiple messages and assigning a role this time.
+
+```
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant who is an expert in the field of Machine Learning."},
+            {"role": "user", "content": prompt_text},
+            {"role": "assistant", "content": "Understood."},
+            {"role": "user", "content": text,}
+        ]
+    )
+```
+
+Result:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+0	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+1	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+2	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	N/A
+3	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+5	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	N/A
+6	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	ViT-VQGAN
+7	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	N/A	N/A
+9	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	N/A
+12	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	N/A	N/A
+13	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	680,000	N/A
+```
+
+Ok, weird that didn't work nearly as well as the ChatGPT experiment. Let's just try to replicate the results from the ChatGPT experiment before trying different things.
+
+Oh wait, of course! It's only getting the first 3*4097 chars this time. It's not getting the relevant excerpt. Still, I want to keep the conditions as consistent as possible to begin with.
+
+Prompt should now be equivalent to the ChatGPT experiment (besides the paper excerpt). 
+
+Result:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+0	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	6144	TPUv4
+1	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	6144	TPUv4
+2	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	6144	TPUv4
+3	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+5	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	6144	TPUv4
+6	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	6144	TPUv4
+7	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	6144	TPUv4
+9	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	6144	TPUv4
+12	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	6144	TPUv4
+13	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	6144	TPUv4
+```
+
+Er, hmm. This makes me think I'm feeding in the PaLM paper every time, accidentally. Let me check. Yes. I need to use a keyword in the `format` function.
