@@ -3226,7 +3226,7 @@ GPT-3.5: 8/10
 GPT-4: 8/10
 1,1,0,1,1,1,1,0.5,0.5,1
 
-This is a good result. But note the caveat that when there was a correct non-N/A answer, I chose the relevant excerpt that contained the answer.
+This is decent performance. But note the caveat that when there was a correct non-N/A answer, I chose the relevant excerpt that contained the answer. So I made it easier compared to feeding the entire paper in.
 
 ## Cost-benefit considerations
 
