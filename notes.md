@@ -3299,3 +3299,79 @@ Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware mode
 ```
 
 Er, hmm. This makes me think I'm feeding in the PaLM paper every time, accidentally. Let me check. Yes. I need to use a keyword in the `format` function.
+
+# 2023-May-09
+
+## Replicating ChatGPT results
+
+Still trying to replicate the ChatGPT results.
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+0	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+1	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+2	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	N/A
+3	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+5	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	Titan V
+6	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	N/A
+7	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	N/A	N/A
+9	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	Titan V
+12	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	N/A	N/A
+13	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+- Ok so now PaLM is correct but everything else is incorrect.
+- This is now a plausible result from feeding in only the first chunk of the paper. Though it is concerning that it's hallucinating "Titan V", which must be based on "Titan V" being mentioned as an example in the prompt. That doesn't bode well for the strategy of feeding in the paper piecemeal and choosing the first non-N/A answer.
+- Is there some confidence value I can get from the model's response?
+
+## Aggregating results of piecewise input
+
+I've now changed the paper parsing function to feed the text in max-input-size chunks, and then take the first non-N/A answer as the final answer.
+
+- One issue with the current implementation is that it just slices right on the limit without regard for sentences or sections. So it might cut off information at a point that means the model can't recognise the correct answer in any of the chunks.
+
+Let's see what happens for Chinchilla. It should be the same as before - "N/A" and "Titan V".
+
+- Got an error with the input being too long. This could just be due to lots of tokens having a small number of characters (e.g. numbers).
+- I shortened the chunk size to `4096 * 2 - len(prompt)`
+- Oo, interesting error for LaMDA: "There's something wrong with extracting the text: That model is currently overloaded with other requests. You can retry your request, or contact us through our help center at help.openai.com if the error persists. (Please include the request ID 2be8be24155359aa822cb52c3fc9de6a in your message.)"
+  - It's unfortunate that this can happen. If we adopt this tool we should have a better way of dealing with this than just ignoring the paper.
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+0	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	NaN	NaN
+1	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	1	A100
+2	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	NaN	NaN
+3	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	NaN	NaN
+5	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	NaN	NaN
+6	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	NaN	NaN
+7	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	NaN	NaN
+9	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	NaN	NaN
+12	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	NaN	NaN
+13	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	NaN	NaN
+```
+
+- Oh dear
+- Note they are NaN rather than "N/A". How does NaN happen? Is "" interpreted as NaN?
+  - Changing the "" default to "none" doesn't change the NaNs. So there's some other problem.
+- The only non-null answer is for Phenaki. But those are the wrong answers for Phenaki.
+  - Coincidentally they are the right answers for "High-resolution image synthesis".
+  - Is it a coincidence?
+  - I don't think it could be an error with ordering.
+
+Ok, let me just try replicating exactly, using the same paper excerpts as ChatGPT experiment, one excerpt at a time.
+
+- Chinchilla: same
+- LaMDA: different. For the number of chips it was 1024 in ChatGPT vs. N/A here.
+  - Let me double check ChatGPT.
+  - Yep, still 1024 and TPU-v3.
+  - What's different? The assistant role?
+  - It gets "TPU-v3" right and the number of chips immediately precedes that in the text.
+  - Adding `        {"role": "system", "content": "You are a helpful assistant."}, ` doesn't change the answers.
+  - Using "gpt-3.5-turbo-0301" model doesn't change the answers.
+  - Hmm, but the model isn't entirely deterministic. I just tried removing some newline chars from the prompt (API version) and sometimes the answer is "N/A" instead of "TPU-v3". Disappointing that it can be so sensitive.
+  - If I remove the example answers from the prompt:
+    - "1. 1024 TPUs were used to pre-train LaMDA.\n2. LaMDA was trained on TPU-v3 chips."
+    - Interesting! More verbose, but these are correct natural language answers.
+    - This updates me to thinking that restrictions on how the model answers can be counter-productive.
+    - 
