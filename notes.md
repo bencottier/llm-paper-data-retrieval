@@ -3374,4 +3374,89 @@ Ok, let me just try replicating exactly, using the same paper excerpts as ChatGP
     - "1. 1024 TPUs were used to pre-train LaMDA.\n2. LaMDA was trained on TPU-v3 chips."
     - Interesting! More verbose, but these are correct natural language answers.
     - This updates me to thinking that restrictions on how the model answers can be counter-productive.
-    - 
+
+# 2023-May-15
+
+PaLM-2 has been added to the database, so I'll index the database rows 1:11 now, to keep the experiment consistent.
+
+## Debugging the notebook
+
+- There is sometimes an `IndexError` when I do piecewise feeding of papers.
+  ```
+  Looking into "Phenaki: Variable Length Video Generation From Open Domain Textual Description"
+  IndexError: index=1, answers=['N/A'], final_answers=['N/A', 'N/A']
+  ```
+  - So there was only one answer given.
+  - This may be a consequence of "loosening" the instructions in the prompt. There are no example answers anymore.
+- Let's print out the response for each chunk
+  - Yeah, some responses are like this: "Response: Sorry, there is no problem provided in the excerpt of the research paper for Question 6. Please provide the complete text."
+    - It seems to hallucinate Question 6.
+    - The index error for Phenaki happens with this response: "Response: N/A"
+    - So this does push in favour of more rigid instructions, with example answers.
+- There might also be a bug with indexing, at least when I use a subset of the DataFrame like I'm doing now.
+  - It looks like the correct answer for LaMDA (1024, TPU-v3) ends up in the first row, which is for GPT-4. On this particular run, LaMDA was the last entry processed successfully before an error was hit on the next entry. So that is probably not a coincidence.
+  - Indexing is correct when I use dummy answers that produce no errors
+  - So there seems to be a problem tied to errors
+  - Oh, maybe it's related to using a variable named `i` both as an argument and in the `for` loop
+  - 
+- I also sometimes get `RateLimitError` from the OpenAI API, meaning the model is too busy. This is annoying because it's out of my control. But there'd be a way to handle it somewhat, e.g. `sleep` and retry the model query up to a max number of times before giving up.
+  - Actually no, this is in my control. Rate limits are applied to each user. It doesn't necessarily mean the model is too busy.
+  - I've implemented exponential backoff on API requests to resolve this.
+
+## New piecewise paper input result
+
+- Switched back to `text-davinci-003`, using the prompt that has examples.
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	TPUv4
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	N/A	TPUv4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	TPUv3/TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	CloudTPUv4
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPUv3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	128	A100
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	N/A	A100, V100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+- Marks: 1, 1, 0.5, 0.5, 1, 0.5, 1, 1, 0, 1
+- Grade: 7.5/10
+- Compared to ChatGPT result, it missed the number of chips for PaLM
+- This is surprisingly good!
+
+Output from GPT-3.5 in ChatGPT UI:
+
+```
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	TPUv4
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311 6144	TPUv4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	TPUv3/TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	CloudTPUv4
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPU-v3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	128	A100
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	N/A	A100, V100, BigGAN-deep, ADM, ADM-G, ADM-U
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+- Marks: 1, 0.5, 1, 1, 0.5, 1, 1, 0, 1
+- Grade: 8/10
+
+Desired output (should have written this down sooner):
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	1024	TPUv4
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPUv4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	TPUv3, TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	TPUv4
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPUv3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	128	A100
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	1	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
