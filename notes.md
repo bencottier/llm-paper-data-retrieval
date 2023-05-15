@@ -3460,3 +3460,68 @@ Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware mode
 14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
 ```
 
+## Setting limits by counting actual tokens
+
+- I want to use the OpenAI tokenizer (`tiktoken`) to count the actual number of tokens, to better adapt the number of chars in each text chunk.
+- Useful snippet I wrote up:
+
+```python
+import tiktoken
+
+model_name = "gpt-3.5-turbo"
+tokenizer = tiktoken.encoding_for_model(model_name)
+
+text = "spam"
+
+# Token limit for each model
+MAX_TOKENS = {
+    "gpt-4": 8192,
+    "gpt-4-32k": 32768,
+    "gpt-3.5-turbo": 4096,
+    "text-davinci-003": 4097,
+}
+
+token_limit = MAX_TOKENS[model_name] - len(tokenizer.encode(prompt))
+
+# Number of tokens
+encoded_text = tokenizer.encode(text)
+```
+
+- Aside: number of tokens for each paper (using `text-davinci-003` tokenizer which is different to `gpt-3.5-turbo` tokenizer)
+
+```
+GPT-4 Technical Report: 84644 tokens for davinci, 75304 tokens for gpt-4
+Phenaki: Variable Length Video Generation From Open Domain Textual Description: 15106 tokens for davinci, 14130 tokens for gpt-4
+Solving Quantitative Reasoning Problems with Language Models: 41815 tokens for davinci, 38377 tokens for gpt-4
+PaLM: Scaling Language Modeling with Pathways: 87181 tokens for davinci, 82875 tokens for gpt-4
+Training Compute-Optimal Large Language Models: 31998 tokens for davinci, 30151 tokens for gpt-4
+Scaling Autoregressive Models for Content-Rich Text-to-Image Generation: 42391 tokens for davinci, 39185 tokens for gpt-4
+LaMDA: Language Models for Dialog Applications: 42530 tokens for davinci, 38884 tokens for gpt-4
+AlexaTM 20B: Few-Shot Learning Using a Large-Scale Multilingual Seq2Seq Model: 32768 tokens for davinci, 31059 tokens for gpt-4
+High-Resolution Image Synthesis with Latent Diffusion Models: 34114 tokens for davinci, 31745 tokens for gpt-4
+Robust Speech Recognition via Large-Scale Weak Supervision: 41375 tokens for davinci, 38852 tokens for gpt-4
+```
+
+  - 6/10 papers are too long even for gpt-4-32k!
+  - So even if we use GPT-4, it's useful to have the piecewise input method.
+
+Result with tokenizing:
+
+```
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	TPUv4
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	N/A	TPUv4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	N/A
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	N/A
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	N/A	N/A
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	A100
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	N/A	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+  - Huh, that's disappointing. Significantly worse than before. Can't get any positive #chips answers.
+  - Marks: 1, 1, 0.5, 0.5, 0.5, 0.5, 0, 0.5, 0.5, 1
+  - Grade: 6/10
+  - How much is randomness, how much is the longer chunk length, how much is a possible bug? Or bad luck due to the different boundaries of the chunks?
+  - 
