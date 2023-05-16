@@ -3679,5 +3679,46 @@ Hardware model: 4/10
 ```
 
 - Actual grade: `{'Number of hardware units': 7, 'Hardware model': 7}
-- 
+
+## New dataset
+
+18 papers, with duplicates removed. No changes to model setup compared to previous.
+
+Evaluation:
+
+```
+Number of hardware units
+N/A != 1024
+) != N/A
+) != N/A
+2048 != 1024
+N/A != 512
+N/A != 32
+) != N/A
+1 GPU != 1
+none != 64
+N/A != 64
+256 != 100
+8 GPUs != 8
+1 != 20
+Hardware model
+N/A != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+ViT-VQGAN != TPUv4
+TPU-v3 != TPUv3
+V100 (used to train all models) != V100
+Cloud TPU V3 != TPUv3
+V100 (for training the full network) != V100
+N/A != P100
+none != TPUv2
+K40, Tesla != K40
+N/A != P100
+NVIDIA GeForce GTX 1080 != N/A
+Number of hardware units: 5/18
+Hardware model: 5/18
+```
+
+- Actual grade: `{'Number of hardware units': 7, 'Hardware model': 12}`
+- I think these closed braces are worth investigating. Perhaps the model is responding in a way that I'm not parsing correctly.
 
