@@ -3524,4 +3524,71 @@ Result with tokenizing:
   - Marks: 1, 1, 0.5, 0.5, 0.5, 0.5, 0, 0.5, 0.5, 1
   - Grade: 6/10
   - How much is randomness, how much is the longer chunk length, how much is a possible bug? Or bad luck due to the different boundaries of the chunks?
-  - 
+
+Result with tokenizing, `gpt-3.5-turbo`, detailed instructions:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	Titan V
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	none
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	Titan V
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	N/A
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPU-v3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	Titan V
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	)	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	28	N/A
+```
+
+Desired output:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	1024	TPUv4
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPUv4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	TPUv3, TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	TPUv4
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPUv3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	128	A100
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	1	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+- Clearly some false positives of "Titan V" due to mentioning that as an example answer
+- Marks: 0.5, 1, 0, 1, 0.5, 0.5, 1, 0, 0.5, 0.5
+- Grade: 5.5/10
+
+Adding `{"role": "system", "content": "You are an expert in Machine Learning."}`.
+
+Result:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	none	Titan V
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	none	Titan V
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	)	TPUv3/TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	0	Titan V
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPU-v3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	Titan V
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	8	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	Titan V
+```
+
+- Marks: 0, 1, 0, 1, 0.5, 0, 1, 0, 0.5, 0.5
+- Grade: 4.5/10
+- Seems like the "role" prompt makes it hallucinate more. It repeats the "Titan V" false positive even more than before.
+
+## 2023-May-16
+
+- Tamay rightly pointed out I shouldn't read into these changes in performance too much when there's only 10 samples.
+- I think there are real qualitative changes in behaviour that can be picked up on though, e.g. the increases in hallucination. But that's based on an assumption that the model has consistent "tendencies".
+- Seems worth labeling more examples
+  - Do some older papers to check variance over time
+  - Try to get to 20 total, maybe 30
+
+
