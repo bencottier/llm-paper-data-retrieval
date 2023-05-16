@@ -3583,7 +3583,9 @@ Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware mode
 - Grade: 4.5/10
 - Seems like the "role" prompt makes it hallucinate more. It repeats the "Titan V" false positive even more than before.
 
-## 2023-May-16
+# 2023-May-16
+
+Experiment planning
 
 - Tamay rightly pointed out I shouldn't read into these changes in performance too much when there's only 10 samples.
 - I think there are real qualitative changes in behaviour that can be picked up on though, e.g. the increases in hallucination. But that's based on an assumption that the model has consistent "tendencies".
@@ -3591,4 +3593,91 @@ Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware mode
   - Do some older papers to check variance over time
   - Try to get to 20 total, maybe 30
 
+Evaluation
+
+- I wrote a function to auto-evaluate the answers
+- But it prints out when the answers don't exactly match, so that I can manually judge
+- I thought about string similarity matching, but it's tricky. In some cases only an exact match will do (e.g. "A100" vs. "V100"). In other cases it's OK (e.g. "TPU-v3" vs. "TPUv3")
+  - I could use a list of multiple valid answers, but it's hard to anticipate all possible correct answers
+
+Tuning performance
+
+- I notice there's a few parameters that could be useful to tune to get better performance.
+- E.g. `presence penalty`. But this could easily lead to more hallucination.
+- I should use `temperature=0` for chat. I'm already doing that for `text-davinci-003`.
+
+## Trying to tune GPT-3.5
+
+Using these args:
+
+```
+        temperature=0,
+        max_tokens=MAX_RESPONSE_TOKENS,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0,
+```
+
+Result:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	none	Titan V
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	none	Titan V
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	)	TPUv3/TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	0	Titan V
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPU-v3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	Titan V
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	8	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+Evaluation:
+
+```
+Number of hardware units
+none != N/A
+none != 1024
+) != N/A
+0 != N/A
+N/A != 128
+8 != 1
+Hardware model
+Titan V != N/A
+Titan V != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+Titan V != TPUv4
+TPU-v3 != TPUv3
+Titan V != A100
+Number of hardware units: 4/10
+Hardware model: 3/10
+{'Number of hardware units': 4, 'Hardware model': 3}
+```
+
+- Actual grade: `{'Number of hardware units': 4, 'Hardware model': 6}`.
+
+Removing `role` part of prompt:
+
+```
+Number of hardware units
+N/A != 1024
+N/A != 128
+8 != 1
+Hardware model
+Minerva 8B, Minerva 62B, Minerva 540B != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+N/A != TPUv4
+TPU-v3 != TPUv3
+Titan V != A100
+Number of hardware units: 7/10
+Hardware model: 4/10
+{'Number of hardware units': 7, 'Hardware model': 4}
+```
+
+- Actual grade: `{'Number of hardware units': 7, 'Hardware model': 7}
+- 
 
