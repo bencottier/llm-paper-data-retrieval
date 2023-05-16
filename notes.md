@@ -3721,4 +3721,57 @@ Hardware model: 5/18
 
 - Actual grade: `{'Number of hardware units': 7, 'Hardware model': 12}`
 - I think these closed braces are worth investigating. Perhaps the model is responding in a way that I'm not parsing correctly.
+  - Output:
 
+```
+...
+Looking into "Training Compute-Optimal Large Language Models"
+Warning: processed answer was ")". Original response was: N/A (There is no mention of GPUs, TPUs, or chips used to train the model in the given text.) 
+
+N/A (There is no mention of the model of GPU or TPU used to train the model in the given text.)
+Answers: [')', 'TPUv3/TPUv4']
+...
+Looking into "Language models are Few- Shot Learners"
+Warning: processed answer was ")". Original response was: N/A (This is not a machine learning research paper, but rather a news article and some sections of a research paper on GPT-3.)
+Answers: [')', 'V100 (used to train all models)']
+```
+
+  - So with the Chinchilla paper, there was an answer not recognised as amounting to "N/A" because it had extra parenthetical stuff.
+  - The parsing found the "." character in the answer and assumed that followed a question number. But in this case the answer had no question number.
+
+After fixing parsing:
+
+```
+Number of hardware units
+N/A != 1024
+none != N/A
+2048 != 1024
+N/A != 512
+N/A != 32
+1 GPU != 1
+none != 64
+N/A != 64
+256 != 100
+8 GPUs != 8
+1 != 20
+Hardware model
+N/A != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+ViT-VQGAN != TPUv4
+TPU-v3 != TPUv3
+V100 (used to train all models) != V100
+Cloud TPU V3 != TPUv3
+V100 (for training the full network) != V100
+N/A != P100
+none != TPUv2
+K40, Tesla != K40
+N/A != P100
+NVIDIA GeForce GTX 1080 != N/A
+Number of hardware units: 7/18
+Hardware model: 5/18
+{'Number of hardware units': 7, 'Hardware model': 5}
+```
+
+- Actual grade: {'Number of hardware units': 9, 'Hardware model': 12}
+- Cool, improved by 2 marks.
