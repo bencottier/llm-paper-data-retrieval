@@ -3460,3 +3460,572 @@ Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware mode
 14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
 ```
 
+## Setting limits by counting actual tokens
+
+- I want to use the OpenAI tokenizer (`tiktoken`) to count the actual number of tokens, to better adapt the number of chars in each text chunk.
+- Useful snippet I wrote up:
+
+```python
+import tiktoken
+
+model_name = "gpt-3.5-turbo"
+tokenizer = tiktoken.encoding_for_model(model_name)
+
+text = "spam"
+
+# Token limit for each model
+MAX_TOKENS = {
+    "gpt-4": 8192,
+    "gpt-4-32k": 32768,
+    "gpt-3.5-turbo": 4096,
+    "text-davinci-003": 4097,
+}
+
+token_limit = MAX_TOKENS[model_name] - len(tokenizer.encode(prompt))
+
+# Number of tokens
+encoded_text = tokenizer.encode(text)
+```
+
+- Aside: number of tokens for each paper (using `text-davinci-003` tokenizer which is different to `gpt-3.5-turbo` tokenizer)
+
+```
+GPT-4 Technical Report: 84644 tokens for davinci, 75304 tokens for gpt-4
+Phenaki: Variable Length Video Generation From Open Domain Textual Description: 15106 tokens for davinci, 14130 tokens for gpt-4
+Solving Quantitative Reasoning Problems with Language Models: 41815 tokens for davinci, 38377 tokens for gpt-4
+PaLM: Scaling Language Modeling with Pathways: 87181 tokens for davinci, 82875 tokens for gpt-4
+Training Compute-Optimal Large Language Models: 31998 tokens for davinci, 30151 tokens for gpt-4
+Scaling Autoregressive Models for Content-Rich Text-to-Image Generation: 42391 tokens for davinci, 39185 tokens for gpt-4
+LaMDA: Language Models for Dialog Applications: 42530 tokens for davinci, 38884 tokens for gpt-4
+AlexaTM 20B: Few-Shot Learning Using a Large-Scale Multilingual Seq2Seq Model: 32768 tokens for davinci, 31059 tokens for gpt-4
+High-Resolution Image Synthesis with Latent Diffusion Models: 34114 tokens for davinci, 31745 tokens for gpt-4
+Robust Speech Recognition via Large-Scale Weak Supervision: 41375 tokens for davinci, 38852 tokens for gpt-4
+```
+
+  - 6/10 papers are too long even for gpt-4-32k!
+  - So even if we use GPT-4, it's useful to have the piecewise input method.
+
+Result with tokenizing:
+
+```
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	TPUv4
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	N/A	TPUv4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	N/A
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	N/A
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	N/A	N/A
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	A100
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	N/A	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+  - Huh, that's disappointing. Significantly worse than before. Can't get any positive #chips answers.
+  - Marks: 1, 1, 0.5, 0.5, 0.5, 0.5, 0, 0.5, 0.5, 1
+  - Grade: 6/10
+  - How much is randomness, how much is the longer chunk length, how much is a possible bug? Or bad luck due to the different boundaries of the chunks?
+
+Result with tokenizing, `gpt-3.5-turbo`, detailed instructions:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	Titan V
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	N/A	none
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	Titan V
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	N/A
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPU-v3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	Titan V
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	)	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	28	N/A
+```
+
+Desired output:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	N/A	N/A
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	1024	TPUv4
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPUv4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	N/A	TPUv3, TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	N/A	TPUv4
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPUv3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	128	A100
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	1	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+- Clearly some false positives of "Titan V" due to mentioning that as an example answer
+- Marks: 0.5, 1, 0, 1, 0.5, 0.5, 1, 0, 0.5, 0.5
+- Grade: 5.5/10
+
+Adding `{"role": "system", "content": "You are an expert in Machine Learning."}`.
+
+Result:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	none	Titan V
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	none	Titan V
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	)	TPUv3/TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	0	Titan V
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPU-v3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	Titan V
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	8	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	Titan V
+```
+
+- Marks: 0, 1, 0, 1, 0.5, 0, 1, 0, 0.5, 0.5
+- Grade: 4.5/10
+- Seems like the "role" prompt makes it hallucinate more. It repeats the "Titan V" false positive even more than before.
+
+# 2023-May-16
+
+Experiment planning
+
+- Tamay rightly pointed out I shouldn't read into these changes in performance too much when there's only 10 samples.
+- I think there are real qualitative changes in behaviour that can be picked up on though, e.g. the increases in hallucination. But that's based on an assumption that the model has consistent "tendencies".
+- Seems worth labeling more examples
+  - Do some older papers to check variance over time
+  - Try to get to 20 total, maybe 30
+
+Evaluation
+
+- I wrote a function to auto-evaluate the answers
+- But it prints out when the answers don't exactly match, so that I can manually judge
+- I thought about string similarity matching, but it's tricky. In some cases only an exact match will do (e.g. "A100" vs. "V100"). In other cases it's OK (e.g. "TPU-v3" vs. "TPUv3")
+  - I could use a list of multiple valid answers, but it's hard to anticipate all possible correct answers
+
+Tuning performance
+
+- I notice there's a few parameters that could be useful to tune to get better performance.
+- E.g. `presence penalty`. But this could easily lead to more hallucination.
+- I should use `temperature=0` for chat. I'm already doing that for `text-davinci-003`.
+
+## Trying to tune GPT-3.5
+
+Using these args:
+
+```
+        temperature=0,
+        max_tokens=MAX_RESPONSE_TOKENS,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0,
+```
+
+Result:
+
+```
+Author(s)	Publication date	Reference	Link	Number of hardware units	Hardware model
+1	OpenAI	2023-03-15	GPT-4 Technical Report	https://arxiv.org/abs/2303.08774	none	Titan V
+2	Ruben Villegas, Mohammad Babaeizadeh, Pieter-J...	2022-10-05	Phenaki: Variable Length Video Generation From...	https://arxiv.org/abs/2210.02399	N/A	N/A
+3	Aitor Lewkowycz, Anders Andreassen, David Doha...	2022-06-29	Solving Quantitative Reasoning Problems with L...	https://arxiv.org/abs/2206.14858	none	Titan V
+4	Aakanksha Chowdhery, Sharan Narang, Jacob Devl...	2022-04-04	PaLM: Scaling Language Modeling with Pathways	https://arxiv.org/abs/2204.02311	6144	TPU v4
+6	Jordan Hoffmann, Sebastian Borgeaud, Arthur Me...	2022-03-29	Training Compute-Optimal Large Language Models	https://arxiv.org/abs/2203.15556	)	TPUv3/TPUv4
+7	Jiahui Yu, Yuanzhong Xu, Jing Yu Koh, Thang Lu...	2022-06-22	Scaling Autoregressive Models for Content-Rich...	https://arxiv.org/abs/2206.10789v1	0	Titan V
+8	Romal Thoppilan, Daniel De Freitas, Jamie Hall...	2022-02-10	LaMDA: Language Models for Dialog Applications	https://arxiv.org/abs/2201.08239	1024	TPU-v3
+10	Saleh Soltan, Shankar Ananthakrishnan, Jack Fi...	2022-08-02	AlexaTM 20B: Few-Shot Learning Using a Large-S...	https://arxiv.org/abs/2208.01448	N/A	Titan V
+13	Robin Rombach, Andreas Blattmann, Dominik Lore...	2022-04-13	High-Resolution Image Synthesis with Latent Di...	https://arxiv.org/abs/2112.10752	8	A100
+14	Alec Radford, Jong Wook Kim, Tao Xu, Greg Broc...	2022-09-21	Robust Speech Recognition via Large-Scale Weak...	https://cdn.openai.com/papers/whisper.pdf	N/A	N/A
+```
+
+Evaluation:
+
+```
+Number of hardware units
+none != N/A
+none != 1024
+) != N/A
+0 != N/A
+N/A != 128
+8 != 1
+Hardware model
+Titan V != N/A
+Titan V != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+Titan V != TPUv4
+TPU-v3 != TPUv3
+Titan V != A100
+Number of hardware units: 4/10
+Hardware model: 3/10
+{'Number of hardware units': 4, 'Hardware model': 3}
+```
+
+- Actual grade: `{'Number of hardware units': 4, 'Hardware model': 6}`.
+
+Removing `role` part of prompt:
+
+```
+Number of hardware units
+N/A != 1024
+N/A != 128
+8 != 1
+Hardware model
+Minerva 8B, Minerva 62B, Minerva 540B != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+N/A != TPUv4
+TPU-v3 != TPUv3
+Titan V != A100
+Number of hardware units: 7/10
+Hardware model: 4/10
+{'Number of hardware units': 7, 'Hardware model': 4}
+```
+
+- Actual grade: `{'Number of hardware units': 7, 'Hardware model': 7}
+
+## New dataset
+
+18 papers, with duplicates removed. No changes to model setup compared to previous.
+
+Evaluation:
+
+```
+Number of hardware units
+N/A != 1024
+) != N/A
+) != N/A
+2048 != 1024
+N/A != 512
+N/A != 32
+) != N/A
+1 GPU != 1
+none != 64
+N/A != 64
+256 != 100
+8 GPUs != 8
+1 != 20
+Hardware model
+N/A != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+ViT-VQGAN != TPUv4
+TPU-v3 != TPUv3
+V100 (used to train all models) != V100
+Cloud TPU V3 != TPUv3
+V100 (for training the full network) != V100
+N/A != P100
+none != TPUv2
+K40, Tesla != K40
+N/A != P100
+NVIDIA GeForce GTX 1080 != N/A
+Number of hardware units: 5/18
+Hardware model: 5/18
+```
+
+- Actual grade: `{'Number of hardware units': 7, 'Hardware model': 12}`
+- I think these closed braces are worth investigating. Perhaps the model is responding in a way that I'm not parsing correctly.
+  - Output:
+
+```
+...
+Looking into "Training Compute-Optimal Large Language Models"
+Warning: processed answer was ")". Original response was: N/A (There is no mention of GPUs, TPUs, or chips used to train the model in the given text.) 
+
+N/A (There is no mention of the model of GPU or TPU used to train the model in the given text.)
+Answers: [')', 'TPUv3/TPUv4']
+...
+Looking into "Language models are Few- Shot Learners"
+Warning: processed answer was ")". Original response was: N/A (This is not a machine learning research paper, but rather a news article and some sections of a research paper on GPT-3.)
+Answers: [')', 'V100 (used to train all models)']
+```
+
+  - So with the Chinchilla paper, there was an answer not recognised as amounting to "N/A" because it had extra parenthetical stuff.
+  - The parsing found the "." character in the answer and assumed that followed a question number. But in this case the answer had no question number.
+
+After fixing parsing:
+
+```
+Number of hardware units
+N/A != 1024
+none != N/A
+2048 != 1024
+N/A != 512
+N/A != 32
+1 GPU != 1
+none != 64
+N/A != 64
+256 != 100
+8 GPUs != 8
+1 != 20
+Hardware model
+N/A != TPUv4
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+ViT-VQGAN != TPUv4
+TPU-v3 != TPUv3
+V100 (used to train all models) != V100
+Cloud TPU V3 != TPUv3
+V100 (for training the full network) != V100
+N/A != P100
+none != TPUv2
+K40, Tesla != K40
+N/A != P100
+NVIDIA GeForce GTX 1080 != N/A
+Number of hardware units: 7/18
+Hardware model: 5/18
+{'Number of hardware units': 7, 'Hardware model': 5}
+```
+
+- Actual grade: {'Number of hardware units': 9, 'Hardware model': 12}
+- Cool, improved by 2 marks.
+
+Now trying "gpt-4" (8k context). Result:
+
+```
+Number of hardware units
+N/A != 1024
+N/A != 32
+2048 != 1024
+N/A != 512
+N/A != 32
+N/A != 1
+N/A != 64
+N/A != 100
+N/A != 20
+Hardware model
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+CloudTPUv4 != TPUv4
+TPU-v3 != TPUv3
+32G V100 != V100
+TPU v3 != TPUv3
+Cloud TPU V3 != TPUv3
+N/A != P100
+TPU != TPUv2
+N/A != K40
+NVIDIA GeForce GTX 1080 != N/A
+Number of hardware units: 9/18
+Hardware model: 7/18
+{'Number of hardware units': 9, 'Hardware model': 7}
+```
+
+- Actual grade: `{'Number of hardware units': 9, 'Hardware model': 14}
+- Ok, a further improvement of 2 marks for hardware models. Also fewer hallucinations.
+  - The 2048 != 1024 is a tricky one. IIRC the paper states 2048 TPU-v3 _cores_, but there are 2 cores per TPU-v3 unit. Arguably correct. But you'd want to have the context.
+- So accuracy on 'Number of hardware units' 50%, 'Hardware model' 78%
+
+## Extracting relevant quotes
+
+- I'm increasingly feeling like it's important to get the model to "show its work". E.g., repeat the relevant quote from the paper verbatim. That makes it easier to verify.
+  - Compare this to what we currently do in the database - we provide a page number, or section, or quote where we got the information.
+  - It's only going to create _more_ work if we don't trust the model's answers and we want to verify them, but there's no context given by the model for why it answered the way it did.
+  - This pushes in favour of a two-tiered approach: providing the final answer but also the relevant quote(s) that informed the answer. These can exist in separate cells of the resulting table.
+    - Different ways to do this:
+      - Two independent passes of the paper into the model, one asking for the relevant quote(s), the other asking for the final answers
+        - Independent passes risks having the answers based on independent information. The reasoning for the final answer could be different to the reasoning for picking out the quotes.
+      - Pass the paper into the model to get relevant quote(s), then pass the relevant quotes with the questions into the model to get the final answers
+      - Ask the model to provide the final answers AND the relevant quotes in one prompt.
+        - I feel like this is the simplest and most natural thing to do for LLMs. There would just be a challenge with parsing the response into answer, reasoning, answer, reasoning. But we can make that easier via clear instructions.
+        - There also seems to be some consensus that getting an LLM to write out its reasoning improves performance in general. So we can expect this approach to improve performance on the final answers as well as providing greater transparency.
+        - What would a prompt for this look like?
+
+```
+"""
+Read the Machine Learning research paper below and answer the following questions. 
+
+## Questions
+
+1. How many GPUs or TPUs or chips were used to train the model? Just state the number.
+2. What model of GPU or TPU was used to train the model?
+
+## Instructions for how to answer each question
+
+1. Write the question number, e.g. "1. ".
+2. Write "Relevant quotes: " and copy verbatim any relevant quotes from the paper that inform your final answer.
+3. Write "Final answer: " and then write your final answer for the question.
+4. If the answer cannot be determined from the text, just write "Relevant quotes: N/A. Final answer: N/A.".
+
+## Made-up example answers
+
+1. Relevant quotes: "We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days." Final answer: 1024.
+2. Relevant quotes: "We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days." Final answer: V100.
+
+1. Relevant quotes: N/A. Final answer: N/A.
+2. Relevant quotes: "SuperGAN was trained on a TPUv3 cluster, achieving a throughput of 52 TFLOPS." Final answer: TPUv3.
+
+## Paper
+
+{paper_text}
+
+## Answers
+"""
+```
+
+- Ok `gpt-3.5-turbo` follow this instruction well for LaMDA (but note this is the cherry-picked excerpt example, and I adapted the relevant quote from LaMDA into one of the examples in the prompt)
+  - '1. Relevant quote: "We pre-trained LaMDA on 1024 TPU-v3 chips for a total of about 57.7 days". Final answer: 1024. \n2. Relevant quote: "We pre-trained LaMDA on 1024 TPU-v3 chips for a total of about 57.7 days.  Final answer: TPU-v3. '
+  - Formatting an answer like this is annoying. Could I just get it to respond in the format of a dict?
+
+```
+# Double the actual curly braces to escape string formatting later
+prompt_text = """Read the Machine Learning research paper below and answer the following questions. Refer to the example answers for how to format the answers.
+
+## Questions
+
+1. How many GPUs or TPUs or chips were used to train the model?
+2. What model of GPU or TPU was used to train the model?
+
+## Made-up example answers
+
+### Example 1: all answers are in the text
+
+[{{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': '1024'}}, {{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': 'V100'}}]
+
+### Example 2: some answers are not in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'SuperGAN was trained using TPUv3, achieving a throughput of 52 TFLOPS.', 'final_answer': 'TPUv3'}}]
+
+### Example 3: no answers are in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}]
+
+## Paper
+
+{paper_text}
+
+## Answers
+"""
+```
+
+Result:
+
+```
+'1. How many GPUs or TPUs or chips were used to train the model?\n- LaMDA was pre-trained on 1024 TPU-v3 chips.\n\n2. What model of GPU or TPU was used to train the model?\n- TPU-v3 was used to train the model.'
+```
+
+- Hmm, no good.
+- I'll try clearer instructions
+
+```
+# Double the actual curly braces to escape string formatting later
+prompt_text = """Read the Machine Learning research paper below and answer the following questions.
+
+## Questions
+
+1. How many GPUs or TPUs or chips were used to train the model?
+2. What model of GPU or TPU was used to train the model?
+
+## Instructions for how to answer
+
+- Format the answer as a Python list of dictionaries, where each dictionary corresponds to a question and has two keys: "relevant_quote" and "final_answer".
+- The "relevant_quote" key should have a string value that is the quote from the paper that is relevant to the question.
+- The "final_answer" key should have a string value that is the answer to the question.
+
+## Made-up example answers
+
+### Example 1: all answers are in the text
+
+[{{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': '1024'}}, {{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': 'V100'}}]
+
+### Example 2: some answers are not in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'SuperGAN was trained using TPUv3, achieving a throughput of 52 TFLOPS.', 'final_answer': 'TPUv3'}}]
+
+### Example 3: no answers are in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}]
+
+## Paper
+
+{paper_text}
+
+## Answers
+"""
+```
+
+Result:
+
+```
+"[{'relevant_quote': 'We pre-trained LaMDA on 1024 TPU-v3 chips for a total of about 57.7 days, and 256K tokens per batch.', 'final_answer': '1024 TPU-v3 chips'}, {'relevant_quote': 'The Transformer has 64 layers, dmodel = 8192, df                           "
+```
+
+- Ok. Seems harder to get this to work.
+- Is `text-davinci-003` any better?
+- Back to the previous prompt with natural language answers, but asking for a slightly easier-to-parse structure with the final answer first and the relevant quote in parentheses.
+- Trying the 18-paper experiment
+- Manually picking out the final answers for now.
+- Performance:
+
+```
+Number of hardware units
+1 != 1024
+2048 != 1024
+64-512 != 512
+N/A != 32
+8 != 1
+5000 != 64
+N/A != 50
+16 != 64
+N/A != 100
+N/A != 20
+Hardware model
+N/A != TPUv4
+TPU != TPUv3
+Jetson TX2 != V100
+N/A != P100
+TPU != TPUv2
+N/A != K80
+N/A != P100
+GTX 1080 != N/A
+Number of hardware units: 8/18
+Hardware model: 10/18
+```
+
+- Actual grade: 9/18, 10/18 (I'll pay the '64-512' since it was ambiguous)
+- But it is providing seemingly real and relevant quotes. This is really useful to (a) potentially correct the answer quickly, (b) understand why the answer was given
+- There are some cases where I suspect the lack of frequency penalty is causing problems, e.g. "Answers: ['1. 1 (1. "We used the t5x framework (Roberts et al., 2022) and trained our models with v4 TPU on Google Cloud.  2.  1  1  1  1  1  1', 'N/A']"
+  - Note the repeated 1s
+- Trying `frequency_penalty=0` (i.e. back to default)
+
+```
+Number of hardware units
+1 != 1024
+2048 != 1024
+64-512 != 512
+N/A != 32
+8 != 1
+5000 != 64
+N/A != 50
+16 != 64
+N/A != 100
+N/A != 20
+Hardware model
+Jetson TX2 != V100
+N/A != P100
+TPU != TPUv2
+N/A != K80
+N/A != P100
+GTX 1080 != N/A
+Number of hardware units: 8/18
+Hardware model: 12/18
+```
+
+  - The above problem goes away
+  - Performance on hardware model question increases to 12/18
+  - So at this point we have just as good performance as before, plus more transparency. That's great.
+
+GPT-4:
+
+```
+Number of hardware units
+2048 != 1024
+8 != N/A
+N/A != 1
+5000 != 64
+32 != 64
+N/A != 100
+1 != 20
+Hardware model
+GTX 1080 != N/A
+Number of hardware units: 11/18
+Hardware model: 17/18
+{'Number of hardware units': 11, 'Hardware model': 17}
+```
+
+- Wow, nice.
