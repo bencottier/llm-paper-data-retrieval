@@ -3775,3 +3775,175 @@ Hardware model: 5/18
 
 - Actual grade: {'Number of hardware units': 9, 'Hardware model': 12}
 - Cool, improved by 2 marks.
+
+Now trying "gpt-4" (8k context). Result:
+
+```
+Number of hardware units
+N/A != 1024
+N/A != 32
+2048 != 1024
+N/A != 512
+N/A != 32
+N/A != 1
+N/A != 64
+N/A != 100
+N/A != 20
+Hardware model
+TPU v4 != TPUv4
+TPUv3/TPUv4 != TPUv3, TPUv4
+CloudTPUv4 != TPUv4
+TPU-v3 != TPUv3
+32G V100 != V100
+TPU v3 != TPUv3
+Cloud TPU V3 != TPUv3
+N/A != P100
+TPU != TPUv2
+N/A != K40
+NVIDIA GeForce GTX 1080 != N/A
+Number of hardware units: 9/18
+Hardware model: 7/18
+{'Number of hardware units': 9, 'Hardware model': 7}
+```
+
+- Actual grade: `{'Number of hardware units': 9, 'Hardware model': 14}
+- Ok, a further improvement of 2 marks for hardware models. Also fewer hallucinations.
+  - The 2048 != 1024 is a tricky one. IIRC the paper states 2048 TPU-v3 _cores_, but there are 2 cores per TPU-v3 unit. Arguably correct. But you'd want to have the context.
+- So accuracy on 'Number of hardware units' 50%, 'Hardware model' 78%
+
+## Extracting relevant quotes
+
+- I'm increasingly feeling like it's important to get the model to "show its work". E.g., repeat the relevant quote from the paper verbatim. That makes it easier to verify.
+  - Compare this to what we currently do in the database - we provide a page number, or section, or quote where we got the information.
+  - It's only going to create _more_ work if we don't trust the model's answers and we want to verify them, but there's no context given by the model for why it answered the way it did.
+  - This pushes in favour of a two-tiered approach: providing the final answer but also the relevant quote(s) that informed the answer. These can exist in separate cells of the resulting table.
+    - Different ways to do this:
+      - Two independent passes of the paper into the model, one asking for the relevant quote(s), the other asking for the final answers
+        - Independent passes risks having the answers based on independent information. The reasoning for the final answer could be different to the reasoning for picking out the quotes.
+      - Pass the paper into the model to get relevant quote(s), then pass the relevant quotes with the questions into the model to get the final answers
+      - Ask the model to provide the final answers AND the relevant quotes in one prompt.
+        - I feel like this is the simplest and most natural thing to do for LLMs. There would just be a challenge with parsing the response into answer, reasoning, answer, reasoning. But we can make that easier via clear instructions.
+        - There also seems to be some consensus that getting an LLM to write out its reasoning improves performance in general. So we can expect this approach to improve performance on the final answers as well as providing greater transparency.
+        - What would a prompt for this look like?
+
+```
+"""
+Read the Machine Learning research paper below and answer the following questions. 
+
+## Questions
+
+1. How many GPUs or TPUs or chips were used to train the model? Just state the number.
+2. What model of GPU or TPU was used to train the model?
+
+## Instructions for how to answer each question
+
+1. Write the question number, e.g. "1. ".
+2. Write "Relevant quotes: " and copy verbatim any relevant quotes from the paper that inform your final answer.
+3. Write "Final answer: " and then write your final answer for the question.
+4. If the answer cannot be determined from the text, just write "Relevant quotes: N/A. Final answer: N/A.".
+
+## Made-up example answers
+
+1. Relevant quotes: "We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days." Final answer: 1024.
+2. Relevant quotes: "We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days." Final answer: V100.
+
+1. Relevant quotes: N/A. Final answer: N/A.
+2. Relevant quotes: "SuperGAN was trained on a TPUv3 cluster, achieving a throughput of 52 TFLOPS." Final answer: TPUv3.
+
+## Paper
+
+{paper_text}
+
+## Answers
+"""
+```
+
+- Ok `gpt-3.5-turbo` follow this instruction well for LaMDA (but note this is the cherry-picked excerpt example, and I adapted the relevant quote from LaMDA into one of the examples in the prompt)
+  - '1. Relevant quote: "We pre-trained LaMDA on 1024 TPU-v3 chips for a total of about 57.7 days". Final answer: 1024. \n2. Relevant quote: "We pre-trained LaMDA on 1024 TPU-v3 chips for a total of about 57.7 days.  Final answer: TPU-v3. '
+  - Formatting an answer like this is annoying. Could I just get it to respond in the format of a dict?
+
+```
+# Double the actual curly braces to escape string formatting later
+prompt_text = """Read the Machine Learning research paper below and answer the following questions. Refer to the example answers for how to format the answers.
+
+## Questions
+
+1. How many GPUs or TPUs or chips were used to train the model?
+2. What model of GPU or TPU was used to train the model?
+
+## Made-up example answers
+
+### Example 1: all answers are in the text
+
+[{{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': '1024'}}, {{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': 'V100'}}]
+
+### Example 2: some answers are not in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'SuperGAN was trained using TPUv3, achieving a throughput of 52 TFLOPS.', 'final_answer': 'TPUv3'}}]
+
+### Example 3: no answers are in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}]
+
+## Paper
+
+{paper_text}
+
+## Answers
+"""
+```
+
+Result:
+
+```
+'1. How many GPUs or TPUs or chips were used to train the model?\n- LaMDA was pre-trained on 1024 TPU-v3 chips.\n\n2. What model of GPU or TPU was used to train the model?\n- TPU-v3 was used to train the model.'
+```
+
+- Hmm, no good.
+- I'll try clearer instructions
+
+```
+# Double the actual curly braces to escape string formatting later
+prompt_text = """Read the Machine Learning research paper below and answer the following questions.
+
+## Questions
+
+1. How many GPUs or TPUs or chips were used to train the model?
+2. What model of GPU or TPU was used to train the model?
+
+## Instructions for how to answer
+
+- Format the answer as a Python list of dictionaries, where each dictionary corresponds to a question and has two keys: "relevant_quote" and "final_answer".
+- The "relevant_quote" key should have a string value that is the quote from the paper that is relevant to the question.
+- The "final_answer" key should have a string value that is the answer to the question.
+
+## Made-up example answers
+
+### Example 1: all answers are in the text
+
+[{{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': '1024'}}, {{'relevant_quote': 'We pre-trained BaLM on 1024 V100 GPUs for a total of about 30 days.', 'final_answer': 'V100'}}]
+
+### Example 2: some answers are not in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'SuperGAN was trained using TPUv3, achieving a throughput of 52 TFLOPS.', 'final_answer': 'TPUv3'}}]
+
+### Example 3: no answers are in the text
+
+[{{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}, {{'relevant_quote': 'N/A', 'final_answer': 'N/A'}}]
+
+## Paper
+
+{paper_text}
+
+## Answers
+"""
+```
+
+Result:
+
+```
+"[{'relevant_quote': 'We pre-trained LaMDA on 1024 TPU-v3 chips for a total of about 57.7 days, and 256K tokens per batch.', 'final_answer': '1024 TPU-v3 chips'}, {'relevant_quote': 'The Transformer has 64 layers, dmodel = 8192, df                           "
+```
+
+- Ok. Seems harder to get this to work.
+- Is `text-davinci-003` any better?
