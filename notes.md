@@ -3947,3 +3947,85 @@ Result:
 
 - Ok. Seems harder to get this to work.
 - Is `text-davinci-003` any better?
+- Back to the previous prompt with natural language answers, but asking for a slightly easier-to-parse structure with the final answer first and the relevant quote in parentheses.
+- Trying the 18-paper experiment
+- Manually picking out the final answers for now.
+- Performance:
+
+```
+Number of hardware units
+1 != 1024
+2048 != 1024
+64-512 != 512
+N/A != 32
+8 != 1
+5000 != 64
+N/A != 50
+16 != 64
+N/A != 100
+N/A != 20
+Hardware model
+N/A != TPUv4
+TPU != TPUv3
+Jetson TX2 != V100
+N/A != P100
+TPU != TPUv2
+N/A != K80
+N/A != P100
+GTX 1080 != N/A
+Number of hardware units: 8/18
+Hardware model: 10/18
+```
+
+- Actual grade: 9/18, 10/18 (I'll pay the '64-512' since it was ambiguous)
+- But it is providing seemingly real and relevant quotes. This is really useful to (a) potentially correct the answer quickly, (b) understand why the answer was given
+- There are some cases where I suspect the lack of frequency penalty is causing problems, e.g. "Answers: ['1. 1 (1. "We used the t5x framework (Roberts et al., 2022) and trained our models with v4 TPU on Google Cloud.  2.  1  1  1  1  1  1', 'N/A']"
+  - Note the repeated 1s
+- Trying `frequency_penalty=0` (i.e. back to default)
+
+```
+Number of hardware units
+1 != 1024
+2048 != 1024
+64-512 != 512
+N/A != 32
+8 != 1
+5000 != 64
+N/A != 50
+16 != 64
+N/A != 100
+N/A != 20
+Hardware model
+Jetson TX2 != V100
+N/A != P100
+TPU != TPUv2
+N/A != K80
+N/A != P100
+GTX 1080 != N/A
+Number of hardware units: 8/18
+Hardware model: 12/18
+```
+
+  - The above problem goes away
+  - Performance on hardware model question increases to 12/18
+  - So at this point we have just as good performance as before, plus more transparency. That's great.
+
+GPT-4:
+
+```
+Number of hardware units
+2048 != 1024
+8 != N/A
+N/A != 1
+5000 != 64
+32 != 64
+N/A != 100
+1 != 20
+Hardware model
+GTX 1080 != N/A
+Number of hardware units: 11/18
+Hardware model: 17/18
+{'Number of hardware units': 11, 'Hardware model': 17}
+```
+
+- Wow, nice.
