@@ -4029,3 +4029,92 @@ Hardware model: 17/18
 ```
 
 - Wow, nice.
+
+# 2023-May-18
+
+## Evaluating quote accuracy, false positives, false negatives
+
+### `gpt-3.5-turbo`
+
+File: `parsed_paper_data_2023-05-17_15-50-57.csv`
+
+Checking whether the flagged cases for GPT-3.5 actually pass if we allow some reasonable flexibility (but not allowing any hallucination or change of meaning):
+
+- [PASSED] Quote not found in scaling_autoregressive_models_for_content-rich_text-to-image_generation: We implement our models in Lingvo and scale with GSPMD on CloudTPUv4 hardware for both training and inference
+  - The quote is there if you remove references like "[39]"
+- [PASSED] Quote not found in gshard_scaling_giant_models_with_conditional_computation_and_automatic_sharding: Figure 1: "Our best quality dense single Transformer model (2.3B parameters) achieving ∆BLEU of 6.1, was trained with GPipe [15] on 2048 TPU v3 cores for 6 weeks or total of 235.5 TPU v3 core-years
+  - This is in the paper: "Our best quality dense single Transformer model (2.3B parameters) achieving ∆BLEU of 6.1, was trained with GPipe [15] on 2048 TPU v3 cores for 6 weeks or total of 235.5 TPU v3 core-years."
+  - And that quote is part of the caption for Figure 1 in the paper. GPT just mashed them together.
+- [PASSED] Quote not found in albert_a_lite_bert_for_self-supervised_learning_of_language_representations.: All the model updates use a batch size of 4096 and a LAMB optimizer with learning rate 0.00176 (You et al., 2019). We train all models for 125,000 steps unless otherwise specified. Training was done on Cloud TPU V3
+  - This is an exact quote, I think it's just an issue with missing spaces on newlines
+- [PASSED] Quote not found in mastering_chess_and_shogi_by_self-play_with_a_general_reinforcement_learning_algorithm: We trained a separate instance of AlphaZero for each game. Training proceeded for 700,000 steps (mini-batches of size 4,096) starting from randomly initialised parameters, using 5,000 first-generation TPUs (15) to generate self-play games and 64 second-generation TPUs to train the neural networks
+  - Actual quote: "We trained a separate instance of AlphaZero for each game. Training proceeded for 700,000 steps (mini-batches of size 4,096) starting from randomly initialised parameters, using 5,000 ﬁrst-generation TPUs (15) to generate self-play games and 64 second-generation TPUs to train the neural networks"
+  - Looks correct, maybe an issue with newline vs. spaces again
+- [QUESTIONABLE] Quote not found in mastering_chess_and_shogi_by_self-play_with_a_general_reinforcement_learning_algorithm: AlphaZero was executed on a single machine with 4 TPUs during evaluation
+  - Closest I could find: "During evaluation, AlphaZero selects moves greedily with respect to the root visit count. Each MCTS was executed on a single machine with 4 TPUs."
+  - Hmm, this is borderline. 
+- [PASSED] Quote not found in attention_is_all_you_need: Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles, by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.0 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature
+  - Actual quote: "Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles, by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.0 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature"
+  - Looks correct, maybe an issue with newline vs. spaces again
+
+False positives and negatives (annotating with "FP" or "FN", "F" = just wrong):
+
+```
+Number of hardware units
+[F] 1 != 1024
+[F] 2048 != 1024
+64-512 != 512
+[FN] N/A != 32
+[F] 8 != 1
+[F] 5000 != 64
+[FN] N/A != 50
+[F] 16 != 64
+[FN] N/A != 100
+[FN] N/A != 20
+Hardware model
+[F] Jetson TX2 != V100
+[FN] N/A != P100
+[F] TPU != TPUv2
+[FN] N/A != K80
+[FN] N/A != P100
+[FP] GTX 1080 != N/A
+
+- F=7, FP=1, FN=7
+
+## `gpt-4`
+Checking whether the flagged cases for GPT-4 actually pass if we allow some reasonable flexibility (but not allowing any hallucination or change of meaning):
+- [QUESTIONABLE] Quote not found in efficient_language_modeling_with_sparse_all-mlp: Num of GPUs: 32
+  - It's not a direct quote but it's a correct read from a Table if you look at the PDF.
+  - The table has "Num of", "GPUs", and "32" in separate positions of the text.
+- [PASSED] Quote not found in gshard_scaling_giant_models_with_conditional_computation_and_automatic_sharding: We demonstrate that such a giant model can efficiently be trained on 2048 TPU v3 accelerators in 4 days
+  - Actual quote: "We demonstrate that such a giant model can efﬁcienctly be trained on 2048 TPU v3 accelerators in 4 days"
+  - There's a special character, "ﬁ"
+- [PASSED] Quote not found in albert_a_lite_bert_for_self-supervised_learning_of_language_representations.: Training was done on Cloud TPU V3
+  - Actual quote: "Train-ing was done on Cloud TPU V3."
+  - Hyphenation across line break.
+- [PASSED] Quote not found in an_image_is_worth_16x16_words_transformers_for_image_recognition_at_scale: it could be trained using a standard cloud TPUv3 with 8 cores in approximately 30 days
+  - Actual quote: "it could be trained using a standard cloud TPUv3 with 8 cores in ap-proximately 30 days."
+  - Hyphenation across line break.
+- [PASSED] Quote not found in mastering_chess_and_shogi_by_self-play_with_a_general_reinforcement_learning_algorithm: Training proceeded for 700,000 steps (mini-batches of size 4,096) starting from randomly initialised parameters, using 5,000 first-generation TPUs (15) to generate self-play games and 64 second-generation TPUs to train the neural networks
+  - Actual quote: "Training proceeded for 700,000 steps (mini-batches of size 4,096) starting from randomly initialised parameters, using 5,000 ﬁrst-generation TPUs (15) to generate self-play games and 64 second-generation TPUs to train the neural networks."
+  - Looks correct, probably a punctuation mismatch
+- [PASSED] Quote not found in outrageously_large_neural_networks_the_sparsely-gated_mixture-of-experts_layer: We trained our models using TensorFlow (Abadi et al., 2016) on clusters containing 16-32 Tesla K40 GPUs
+  - Actual quote: "We trained our models using TensorFlow (Abadi et al., 2016) on clus-ters containing 16-32 Tesla K40 GPUs."
+  - Hyphenation again
+
+False positives and negatives (annotating with "FP" or "FN"):
+
+```
+Number of hardware units
+[F] 2048 != 1024
+[FP] 8 != N/A
+[FN] N/A != 1
+[F] 5000 != 64
+[F] 32 != 64
+[FN] N/A != 100
+[F] 1 != 20
+Hardware model
+[FP] GTX 1080 != N/A
+```
+
+- F=4, FP=2, FN=2
